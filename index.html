@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Опитування для вчителів — ЧНУ</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #ffffff;
+  --ink: #1C1C1C;
+  --green: #0D6E5A;
+  --green-light: #E8F5F1;
+  --grey: #F5F5F5;
+  --grey-mid: #E0E0E0;
+  --muted: #767676;
+  --error: #C0392B;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--white);
+  color: var(--ink);
+  min-height: 100vh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* NAV BAR */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  background: var(--white);
+  border-bottom: 1px solid var(--grey-mid);
+  padding: env(safe-area-inset-top, 0px) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 28px;
+  padding-right: 28px;
+  height: calc(56px + env(safe-area-inset-top, 0px));
+}
+.nav-brand {
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: .01em;
+}
+.nav-counter {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--green);
+}
+
+/* PROGRESS LINE */
+.progress-line {
+  position: fixed;
+  top: calc(56px + env(safe-area-inset-top, 0px));
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--grey-mid);
+  z-index: 200;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+  width: 0%;
+}
+
+/* SCREEN LAYOUT */
+.screen {
+  display: none;
+  min-height: 100vh;
+  padding-top: calc(56px + env(safe-area-inset-top, 0px) + 2px);
+  padding-bottom: 80px;
+}
+.screen.active { display: flex; flex-direction: column; }
+
+.screen-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 28px 24px;
+}
+
+/* QUESTION TYPOGRAPHY */
+.q-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--green);
+  text-transform: none;
+  letter-spacing: .06em;
+  margin-bottom: 14px;
+}
+.q-text {
+  font-size: clamp(1.25rem, 3.5vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 10px;
+  max-width: 56ch;
+}
+.q-hint {
+  font-size: .88rem;
+  color: var(--muted);
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+/* CHOICE OPTIONS */
+.choices { display: flex; flex-direction: column; gap: 10px; }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1.5px solid var(--grey-mid);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  font-size: .95rem;
+  line-height: 1.4;
+  background: var(--white);
+  color: var(--ink);
+  text-align: left;
+  width: 100%;
+}
+.choice:hover { border-color: var(--green); background: var(--green-light); }
+.choice.sel { border-color: var(--green); background: var(--green-light); font-weight: 500; }
+.choice-dot {
+  width: 18px; height: 18px;
+  border: 2px solid var(--grey-mid);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.choice.sel .choice-dot {
+  border-color: var(--green);
+  background: var(--green);
+}
+.choice-dot::after {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: white;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.choice.sel .choice-dot::after { opacity: 1; }
+.choice-sq { border-radius: 4px; }
+.choice-sq::after { border-radius: 2px; }
+
+/* GRID CHOICES (2 col) */
+.choices-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 480px) { .choices-grid { grid-template-columns: 1fr; } }
+
+/* SELECT */
+select {
+  width: 100%;
+  max-width: 400px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--white);
+  border: 1.5px solid var(--grey-mid);
+  border-radius: 8px;
+  padding: 13px 40px 13px 16px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23767676' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+select:focus { border-color: var(--green); }
+
+/* TEXTAREA */
+textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: .97rem;
+  color: var(--ink);
+  background: var(--grey);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  padding: 16px;
+  resize: vertical;
+  min-height: 120px;
+  outline: none;
+  line-height: 1.6;
+  transition: border-color .15s, background .15s;
+}
+textarea:focus { border-color: var(--green); background: var(--white); }
+textarea::placeholder { color: var(--muted); }
+
+/* STAR RATING */
+.stars { display: flex; gap: 6px; flex-wrap: wrap; }
+.star-btn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  transition: transform .1s;
+}
+.star-btn:hover { transform: scale(1.15); }
+.star-svg { width: 36px; height: 36px; fill: var(--grey-mid); transition: fill .1s; }
+.star-btn.lit .star-svg { fill: #F5A623; }
+
+/* RATING ROWS */
+.rating-rows { display: flex; flex-direction: column; gap: 0; }
+.rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--grey);
+}
+.rating-row:first-child { border-top: 1px solid var(--grey); }
+.rating-topic { font-size: .92rem; flex: 1; line-height: 1.35; }
+.rating-stars { display: flex; gap: 3px; flex-shrink: 0; }
+.rstar {
+  background: none; border: none; cursor: pointer; padding: 1px;
+}
+.rstar svg { width: 26px; height: 26px; fill: var(--grey-mid); transition: fill .12s; }
+.rstar.lit svg { fill: #F5A623; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--grey-mid);
+  padding: 14px 28px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+.btn-back {
+  font-family: inherit;
+  font-size: .88rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px 0;
+  transition: color .15s;
+}
+.btn-back:hover { color: var(--ink); }
+.btn-next {
+  font-family: inherit;
+  font-size: .95rem;
+  font-weight: 600;
+  color: white;
+  background: var(--green);
+  border: none;
+  border-radius: 8px;
+  padding: 13px 32px;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.btn-next:hover { opacity: .88; }
+.btn-next:active { transform: scale(.97); }
+
+/* ERROR */
+.err { font-size: .82rem; color: var(--error); margin-top: 8px; display: none; }
+.show-err { display: block; }
+
+/* SUCCESS */
+#screen-done {
+  display: none;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 28px;
+  flex-direction: column;
+}
+#screen-done.active { display: flex; }
+.done-mark {
+  width: 80px; height: 80px;
+  background: var(--green-light);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 28px;
+  font-size: 2.2rem;
+}
+#screen-done h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+#screen-done p { color: var(--muted); max-width: 380px; line-height: 1.6; }
+
+@media (max-width: 480px) {
+  nav, .bottom-nav { padding-left: 18px; padding-right: 18px; }
+  .screen-inner { padding: 32px 18px 24px; }
+  .q-text { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">ЧНУ — Опитування вчителів</span>
+  <span class="nav-counter" id="nav-counter">1 / 8</span>
+</nav>
+<div class="progress-line"><div class="progress-fill" id="prog"></div></div>
+
+<!-- S1: предмети -->
+<div class="screen active" id="s1">
+  <div class="screen-inner">
+    <div class="q-label">Про вас</div>
+    <div class="q-text">Які предмети ви викладаєте?</div>
+    <div class="q-hint">Можна обрати кілька.</div>
+    <div class="choices" id="s1-subjects">
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Фізика</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Інформатика</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Астрономія</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Математика</button>
+    </div>
+    <div class="err" id="e1">Будь ласка, оберіть предмет</div>
+  </div>
+</div>
+
+<!-- S2: стаж + тип -->
+<div class="screen" id="s2">
+  <div class="screen-inner">
+    <div class="q-label">Про вас</div>
+    <div class="q-text">Розкажіть про свій заклад</div>
+    <div style="margin-bottom:24px;">
+      <div class="q-hint" style="margin-bottom:8px;">Педагогічний стаж</div>
+      <select id="s2-exp">
+        <option value="">— оберіть —</option>
+        <option>До 5 років</option>
+        <option>5–15 років</option>
+        <option>Понад 15 років</option>
+      </select>
+    </div>
+    <div>
+      <div class="q-hint" style="margin-bottom:8px;">Тип закладу</div>
+      <select id="s2-type">
+        <option value="">— оберіть —</option>
+        <option>Загальноосвітня школа (місто)</option>
+        <option>Загальноосвітня школа (село)</option>
+        <option>Гімназія / ліцей</option>
+        <option>Профільний ліцей</option>
+        <option>Інше</option>
+      </select>
+    </div>
+    <div class="err" id="e2">Будь ласка, заповніть обидва поля</div>
+  </div>
+</div>
+
+<!-- S3: виклики -->
+<div class="screen" id="s3">
+  <div class="screen-inner">
+    <div class="q-label">Виклики</div>
+    <div class="q-text">Що зараз найскладніше у вашій практиці?</div>
+    <div class="q-hint">Назвіть 2–3 теми або ситуації, які даються найважче.</div>
+    <textarea id="s3-txt" placeholder="Наприклад: важко підтримати мотивацію учнів після 9 класу; бракує часу на дослідницькі завдання…"></textarea>
+    <div class="err" id="e3">Будь ласка, напишіть хоча б кілька слів</div>
+  </div>
+</div>
+
+<!-- S4: що не вирішено -->
+<div class="screen" id="s4">
+  <div class="screen-inner">
+    <div class="q-label">Виклики</div>
+    <div class="q-text">Що у методиці не вирішено, але всі мовчать?</div>
+    <div class="q-hint">Ваш погляд зсередини практики — найцінніший для дослідника. Можна залишити порожнім.</div>
+    <textarea id="s4-txt" placeholder="Наприклад: ніхто не досліджує, як учні сприймають фізику після переходу на дистанційне навчання…"></textarea>
+  </div>
+</div>
+
+<!-- S5: рейтинг тем -->
+<div class="screen" id="s5">
+  <div class="screen-inner">
+    <div class="q-label">Пріоритети</div>
+    <div class="q-text">Наскільки кожен напрям актуальний для вас?</div>
+    <div class="q-hint">Від 1 (не важливо) до 5 (дуже актуально)</div>
+    <div class="rating-rows" id="s5-ratings"></div>
+  </div>
+</div>
+
+<!-- S6: формат результату -->
+<div class="screen" id="s6">
+  <div class="screen-inner">
+    <div class="q-label">Очікування</div>
+    <div class="q-text">Який результат дослідження був би корисним?</div>
+    <div class="q-hint">Можна обрати кілька.</div>
+    <div class="choices choices-grid" id="s6-fmt">
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Методичні рекомендації</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Готові розробки уроків</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Тести / анкети</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Аналіз + висновки</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Воркшопи / вебінари</button>
+      <button class="choice" onclick="toggleChk(this)"><span class="choice-dot choice-sq"></span>Відеоматеріали</button>
+    </div>
+    <div class="err" id="e6">Будь ласка, оберіть хоча б один варіант</div>
+  </div>
+</div>
+
+<!-- S7: співпраця -->
+<div class="screen" id="s7">
+  <div class="screen-inner">
+    <div class="q-label">Очікування</div>
+    <div class="q-text">Чи готові ви співпрацювати з магістрантом?</div>
+    <div class="q-hint">Надати клас для дослідження, заповнити анкети, дати інтерв'ю.</div>
+    <div class="choices" id="s7-collab">
+      <button class="choice" onclick="toggleRadio(this,'s7-collab')"><span class="choice-dot"></span>Так, готовий/готова</button>
+      <button class="choice" onclick="toggleRadio(this,'s7-collab')"><span class="choice-dot"></span>Залежить від теми та часу</button>
+      <button class="choice" onclick="toggleRadio(this,'s7-collab')"><span class="choice-dot"></span>Наразі ні</button>
+    </div>
+  </div>
+</div>
+
+<!-- S8: своє питання -->
+<div class="screen" id="s8">
+  <div class="screen-inner">
+    <div class="q-label">Ваше питання</div>
+    <div class="q-text">Що ви хотіли б дослідити?</div>
+    <div class="q-hint">Напишіть одне запитання, на яке хотіли б отримати науково обґрунтовану відповідь. Може стати темою чийогось магістерського проєкту.</div>
+    <textarea id="s8-txt" placeholder="Наприклад: «Як підтримати дослідницький інтерес учнів у старших класах, якщо програма дуже щільна?»"></textarea>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="screen-done">
+  <div class="done-mark">✓</div>
+  <h2>Дякуємо!</h2>
+  <p>Ваш досвід допоможе магістрантам ЧНУ обрати справді актуальні теми для досліджень. Результати будуть представлені на підсумку семінару.</p>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav" id="bottom-nav">
+  <button class="btn-back" id="btn-back" onclick="prev()">← Назад</button>
+  <button class="btn-next" id="btn-next" onclick="next()">Далі</button>
+</div>
+
+<script>
+const TOPICS = [
+  'Мотивація учнів',
+  'ШІ-інструменти на уроці',
+  'Диференціація навчання',
+  'Профільне навчання',
+  'Формувальне оцінювання',
+  'Дистанційне / змішане навчання',
+  'STEM і міжпредметні зв\'язки',
+  'Проєктна діяльність учнів',
+  'Підготовка до НМТ',
+  'Навчання під час воєнного стану',
+  'Критичне мислення',
+  'Робота з обдарованими',
+];
+
+const ratings = {};
+
+function buildRatings() {
+  const cont = document.getElementById('s5-ratings');
+  TOPICS.forEach((t, i) => {
+    ratings[i] = 0;
+    const row = document.createElement('div');
+    row.className = 'rating-row';
+    const stars = [1,2,3,4,5].map(n =>
+      `<button class="rstar" data-t="${i}" data-v="${n}" onclick="rate(${i},${n})">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </button>`
+    ).join('');
+    row.innerHTML = `<span class="rating-topic">${t}</span><div class="rating-stars">${stars}</div>`;
+    cont.appendChild(row);
+  });
+}
+
+function rate(topic, val) {
+  ratings[topic] = val;
+  document.querySelectorAll(`.rstar[data-t="${topic}"]`).forEach(b => {
+    b.classList.toggle('lit', parseInt(b.dataset.v) <= val);
+  });
+}
+
+function toggleChk(el) {
+  el.classList.toggle('sel');
+}
+function toggleRadio(el, groupId) {
+  document.querySelectorAll(`#${groupId} .choice`).forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+let cur = 1;
+const total = 8;
+
+function setScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const sc = document.getElementById(`s${n}`);
+  if (sc) sc.classList.add('active');
+  document.getElementById('nav-counter').textContent = `${n} / ${total}`;
+  document.getElementById('prog').style.width = ((n - 1) / total * 100) + '%';
+  document.getElementById('btn-back').style.visibility = n === 1 ? 'hidden' : 'visible';
+  document.getElementById('btn-next').textContent = n === total ? 'Надіслати' : 'Далі';
+  window.scrollTo(0, 0);
+}
+
+function clearErr(id) { document.getElementById(id).classList.remove('show-err'); }
+
+function validate(n) {
+  if (n === 1) {
+    const ok = [...document.querySelectorAll('#s1-subjects .choice.sel')].length > 0;
+    document.getElementById('e1').classList.toggle('show-err', !ok);
+    return ok;
+  }
+  if (n === 2) {
+    const ok = document.getElementById('s2-exp').value && document.getElementById('s2-type').value;
+    document.getElementById('e2').classList.toggle('show-err', !ok);
+    return ok;
+  }
+  if (n === 3) {
+    const ok = document.getElementById('s3-txt').value.trim().length > 2;
+    document.getElementById('e3').classList.toggle('show-err', !ok);
+    return ok;
+  }
+  if (n === 6) {
+    const ok = [...document.querySelectorAll('#s6-fmt .choice.sel')].length > 0;
+    document.getElementById('e6').classList.toggle('show-err', !ok);
+    return ok;
+  }
+  return true;
+}
+
+function next() {
+  if (!validate(cur)) return;
+  if (cur === total) { submit(); return; }
+  cur++;
+  setScreen(cur);
+}
+function prev() {
+  if (cur === 1) return;
+  cur--;
+  setScreen(cur);
+}
+
+function submit() {
+  const data = {
+    subjects: [...document.querySelectorAll('#s1-subjects .choice.sel')].map(c => c.textContent.trim()),
+    experience: document.getElementById('s2-exp').value,
+    schoolType: document.getElementById('s2-type').value,
+    challenges: document.getElementById('s3-txt').value,
+    unsolved: document.getElementById('s4-txt').value,
+    ratings: Object.fromEntries(TOPICS.map((t,i) => [t, ratings[i]])),
+    resultFormat: [...document.querySelectorAll('#s6-fmt .choice.sel')].map(c => c.textContent.trim()),
+    collaborate: ([...document.querySelectorAll('#s7-collab .choice.sel')][0] || {}).textContent?.trim() || '',
+    question: document.getElementById('s8-txt').value,
+    ts: new Date().toISOString(),
+  };
+  window._surveyData = data;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('bottom-nav').style.display = 'none';
+  document.getElementById('screen-done').classList.add('active');
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('nav-counter').textContent = '✓';
+}
+
+buildRatings();
+setScreen(1);
+</script>
+</body>
+</html>
